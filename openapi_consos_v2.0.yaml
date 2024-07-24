@@ -1,0 +1,1936 @@
+openapi: 3.0.0
+info:
+  description: GeoData API
+  version: 4.1.2
+  title: GeoData API
+servers:
+  - url: 'https://api.dpdgroup.com'
+    description: Main (production) server
+  #- url: 'https://api-test.dpsin.dpdgroup.com:8443'
+  #  description: Internal TEST server for testing
+  - url: 'https://api-preprod.dpsin.dpdgroup.com:8443'
+    description: Internal PRE-PROD server for testing
+paths:
+  '/api/geodata/v412/consos':
+    post:
+      tags:
+        - consos
+      summary: Pre-alert coming from one BU to another BU for consolidation information for customs clearence purposes. 
+      description: Pre-alert coming from one BU to another BU for consolidation information for customs clearence purposes. 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              maxItems: 1000
+              items:
+                $ref: '#/components/schemas/Consolidation'
+      parameters:
+        - name: compactErrors
+          in: header
+          description: Omit origin message in the validation error response
+          schema:
+            type: boolean
+          required: false 
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication information is missing or invalid
+        '413':
+          description: Request Entity Too Large
+        '460':
+          description: Unable to process shipments in the request          
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'  
+        '461':
+          description: Unexisting BU code
+        '500':
+          description: Unexpected error
+        '503':
+          description: Service unavailable
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: apikey
+  schemas:
+    Response:
+      type: object
+      required:
+        - conso
+        - results
+      properties:
+        conso:
+          type: object
+        results:
+          type: array
+          items:
+           $ref: '#/components/schemas/ResponseResults'
+    ApiResponse:
+      title: ApiResponse
+      type: array
+      items:
+        $ref: '#/components/schemas/Response'
+    ResponseResults:
+      title: ResponseResults
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: "^([0-9]{3})$"
+        message:
+          type: string  
+    Date:
+      type: string
+      format: date
+      example: "2008-02-13"
+    DateTime:
+      type: string
+      description: UTC time 
+      format: date-time
+      example: '2020-03-12T12:30:11Z'
+    TimeFrame:
+      type: string
+      description: format hhmm, UTC time
+      pattern: '^([0-9]{4,4})$'
+      example: "1400"
+    Name:
+      type: string
+      description: Name
+      maxLength: 35
+    City:
+       type: string
+       description: City
+       maxLength: 35
+    Country: 
+      title : Country
+      type : string
+      description: >
+        Country code :
+          * ISO 3166-1: 2 Alpha Numerical Characters
+          * ISO 3166-1: 3 Alpha Numerical Characters
+          * ISO 3166-1: 3 Numerical Characters
+      maxLength: 3
+      pattern: '^([a-zA-Z0-9]{1,})$'
+    CompName:
+      type: string
+      description: Company Name
+      maxLength: 35
+    AddressLine:
+      type: string
+      description: Address Line
+      maxLength: 35
+    PhoneNumber:
+      type: string
+      description: Telephone / Fax number formatted. Has to be encoded in one of the following ways XXXXXXXX or +intcodeXXXXXXXX or 00intcodeXXXXXXXX where XXXXXXXX is numeric and means the phone / fax number - intcode is the numeric country code with a length from 1 to 4. Without international code, the phone number has to be understood as a domestic one.
+      maxLength: 30
+    Email:
+      type: string
+      description: Email address
+      maxLength: 100
+    MeasurementQualif:
+      type: string
+      description: > 
+        Qualification of the measured value. 
+          * `UKN` : unknown 
+          * `MAN` : manually entered
+          * `CRT` : certified
+      enum: [UKN, MAN, CRT]
+    Dimensions:
+      title: Dimensions
+      description: Measured 3D dimensions of the individual parcel / whole shipment in centimenters
+      properties:
+        length:
+          type: integer
+          maxLength: 3
+        width:
+          type: integer
+          maxLength: 3
+        height:
+          type: integer
+          maxLength: 3
+        qualif:
+          $ref: '#/components/schemas/MeasurementQualif'
+    Weight:
+      title: Weight
+      description: Weight in Grams units without decimal delimiter (e.g. 3000 equals 3kg)
+      properties:
+        value:
+          type: integer
+          minimum: 0
+          maximum: 99999999
+        qualif:
+          $ref: '#/components/schemas/MeasurementQualif'
+    WeightAndDimension:
+      title: WeightAndDimension
+      type: object
+      properties:
+        weight:
+          $ref: '#/components/schemas/Weight'
+        dimensions:
+          $ref: '#/components/schemas/Dimensions' 
+    Temperature:
+      title: Temperature
+      description: Expected Temperature 
+      properties:
+        min:
+          type: string
+          description: Expected mini Temperature in Celsius Degrees.
+              '-20.00' Temperature in last hub before cross-border linehaul
+          maxLength: 7
+        max:
+          type: string
+          description: Expected maxi temperature in Celsius Degrees.
+              '+20.00' Temperature in last hub before cross-border linehaul
+          maxLength: 7
+        unit:
+          type: string
+          description:  >
+            Temperature unit: 
+             * `s1` = Celsius
+             * `s2` = Farenheit
+          enum: [s1, s2]
+          default: s1   
+    Comment:
+      type: string
+      maxLength: 70
+    Gps:
+      title: Gps
+      type: object
+      description: 'GPS location in decimal format'      
+      properties:
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+          example: 48.831239          
+        longitude:
+          type: number
+          format: float          
+          minimum: -180
+          maximum: 180
+          example: 2.278131
+    Currency:
+      type: string
+      description: Currency code (ISO 4217 alpha 3)
+      maxLength: 3
+    CurrencyAmount:
+      type: number
+      format: float
+      example: 48.831
+      description: The number of decimal will depend of the currency (it could be from 0 to three digit).
+      maximum: 99999999
+    Amount:
+      type: object
+      properties:
+        amount:
+          $ref: '#/components/schemas/CurrencyAmount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+    Eori:
+      type: string
+      description: EORI number
+      maxLength: 20
+      pattern: '^([a-zA-Z0-9]{1,})$'
+    VatNumber:
+      type: string
+      description: VAT number 
+      maxLength: 20
+    Tarif:
+      type: string
+      maxLength: 20
+      pattern: '^([a-zA-Z0-9]{1,})$'
+    Hins:
+      title: Hins
+      type: object
+      properties:
+        hinsAmount:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Insurance value for additional insurance if the customer needs an additional insurance. If the value Is higher than zero, the increase of insurance value will be applied.
+        hinsContent:
+            type: string
+            description: Description of parcel for insurance
+            maxLength: 35
+    Depot:
+      title: Depot
+      description: GeoRouting depot code 7 digits - BU code 3 digits + 4
+      type: string
+      minLength: 7
+      maxLength: 7
+      pattern: '^([a-zA-Z0-9]{7})$'
+    MpsCRef:
+      type: string
+      description: Customer reference number to be printed on the parcel (Label / Sticker) if possible
+      maxLength: 35
+    SPartnerRef:
+      type: string
+      description: Partner´s shipment reference field
+      maxLength: 35
+    OpCode:
+      type: string
+      description: >
+        Record:
+         * `INS` - New
+         * `UPD` - Updated
+         * `DEL` - Deleted      
+      enum: [INS, UPD, DEL]
+    SendParcelRef:
+      type: string
+      description: Sender parcel reference number
+      maxLength: 35
+    PPartnerRef:
+      type: string
+      description: Partner´s own parcel reference field
+      maxLength: 35
+    ImageFormat:
+      type: string
+      description: Format of the document
+      enum: [JPG, TIFF, GIF, PNG, PDF, DOCX, ODS, XLSX, CSV]
+    Url:
+      type: string
+      description: URL reference
+    Gln:
+      type: string
+      description: GLN number (Global location number)
+      pattern: '^([0-9]{1,13})$'
+    PudoId:  
+      type: string
+      description: ID number of PUDO point (parcel shop, post office, customer network point, etc., .) This field must use the GeoPost standard PUDO definition (Mandatory for the Cross Border delivery) e.g CC12345 with CC Country Code compliant with ISO 3166-1 2 Alpha Numerical Characters 12345 PUDO Number
+      maxLength: 20
+      pattern: '^([a-zA-Z0-9]{1,})$'
+    ParcelNumber:
+      type: string
+      description: Parcel number.
+      pattern: '^([a-zA-Z0-9]{1,14})$'
+    PodInfo:
+      type: string
+      description: This field includes the POD information
+      maxLength: 35
+    RoutingInfos:
+      title: RoutingInfos
+      description: GeoRouting related information. 
+      properties:
+        dSort:
+          type: string
+          description: GeoRouting D-SORT.The field will be re-calculated at the central EDI-Server if it is empty.
+          maxLength: 5  
+        oSort:
+          type: string
+          description: GeoRouting O-SORT.The field will be re-calculated at the central EDI-Server if it is empty.
+          maxLength: 5            
+        sSort:
+          type: string
+          description: GeoRouting S-SORT.This field is defined for the intermediate sortation (Cf.GeoRouting specification)
+          maxLength: 5            
+        mSort:
+          type: string
+          description: GeoRouting M-SORT, This field provides more information on the D-Sort (GeoRouting)
+          maxLength: 5            
+        routingPlanVersion:
+          type: string
+          description: In the old routing the routing plan version counts 1 character. (Value of GeoPost Routing Version (From 1 to 6) ) With the new GeoRouting,the field must count 8 characters (Date of the GRDB will be used)
+          maxLength: 8
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        routingPlace:
+          type: string
+          description: GeoRouting Routing place. This field provides more information on the D-Sort (GeoRouting).
+          maxLength: 9            
+          pattern: '^([a-zA-Z0-9]{1,})$'
+    Image:
+      title: Image
+      description: Image subtype
+      type: object
+      required:
+        - imgDateTime
+        - imgFormat
+        - imgOwnerBu
+        - imgCategory
+        - imgConfLevel
+      properties:
+        imgDateTime:
+          type: string
+          description: Date and time of the image (in UTC)
+          format: date-time
+          example: '2020-03-12T15:30:11Z'           
+        imgCustomer:
+          type: string
+          description: Customer identification for image authorization (id to be defined)
+          maxLength: 35
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        imgFormat:
+          $ref: '#/components/schemas/ImageFormat'
+        imgOwnerBu:
+          $ref: '#/components/schemas/Depot'
+        imgLink:
+          allOf:
+            - $ref: '#/components/schemas/Url'
+            - description: Image URL
+        imgCategory:
+          type: string
+          description: >
+            Category-Flag (GeoPost Values):
+             * `CRD` - Customer document
+             * `CSD` - Customs document
+             * `CED` - Consignee document
+             * `DRD` - Driver document
+             * `PLI` - Parcel image
+             * `POD` - POC/POD
+             * `RST` - POD runsheet
+             * `OTH` - other
+          enum: [CRD, CSD, CED, DRD, PLI, POD, RST, OTH]
+        imgBuIntDateTime:
+          type: string
+          description: Date and time of memorization of the image. First timestamp in a central database (in UTC)
+          format: date-time
+          example: '2020-03-12T15:30:11Z'      
+        imgConsignee:
+          type: string
+          description: Consignee identification for image authorization (id to be defined)         
+          maxLength: 35
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        imgType:
+          type: string
+          maxLength: 35
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        imgConfLevel:
+          type: string
+          description: >
+            Image confidentiality level:
+             * `CONF` - CONFIDENTIAL
+             * `INT` - INTERNAL       
+          enum: [CONF, INT]
+        imgCreateUser:
+          type: string
+          description: Customer service user that has created the case attachment
+          maxLength: 30
+        imgId:
+          type: string
+          description: Attachment unique identifier within DPD Vault
+          maxLength: 35
+    CPaper:
+      type: string
+      description: >
+        Accompanying documents 
+          * `A` : commercial invoice
+          * `B` : pro forma invoice
+          * `C` : export declaration
+          * `D` : EUR1
+          * `E` : EUR2
+          * `F` : ATR
+          * `G` : delivery note
+          * `H` : third party billing
+          * `I` : T1 document
+      enum: [A, B, C, D, E, F, G, H, I]
+    Contact:
+      type: object
+      description: Contains stakeholder's address and contact details 
+      additionalProperties: false
+      properties:
+        contactDetails:
+          $ref: '#/components/schemas/ContactDetails'
+        comment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Additional comments.
+        gln:
+          $ref: '#/components/schemas/Gln'
+        gps:
+          $ref: '#/components/schemas/Gps'  
+    ContactDetails:
+      type: object
+      properties:
+        title:
+          type: string
+          description: >
+            Title of the contact 
+              * `MR` : Mister
+              * `MS` : Miss
+              * `UKN` : Unknown
+          enum: [MR, MS, UKN]
+        contactPerson:
+          type: string
+          description: Name of the person to contact
+          maxLength: 35
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+        phone2:
+          $ref: '#/components/schemas/PhoneNumber'
+        fax:
+          $ref: '#/components/schemas/PhoneNumber'
+        email:
+          $ref: '#/components/schemas/Email'
+    Address:
+      title: Address
+      type: object
+      properties:      
+        compName:
+          $ref: '#/components/schemas/CompName'
+        compName2:
+          allOf: 
+            - $ref: '#/components/schemas/CompName'
+            - description: Company Name 2 
+        name:
+          allOf: 
+            - $ref: '#/components/schemas/Name'
+            - description: Name
+        name2:
+          allOf: 
+            - $ref: '#/components/schemas/Name'
+            - description: Name 2 
+        street:
+          type: string
+          description: Street
+          maxLength: 35
+        propertyNumber:
+          type: string
+          description: Property number (could be included into in the address field and not set).
+          maxLength: 8
+        addressLine2:
+          allOf: 
+            - $ref: '#/components/schemas/AddressLine'
+            - description: Address Line 2 
+        addressLine3:
+          allOf: 
+            - $ref: '#/components/schemas/AddressLine'
+            - description: Address Line 3 
+        interphoneName:
+          type: string
+          description: Name on the interphone
+          maxLength: 35
+        floor:
+          type: string
+          description: Information on the floor (e.g. if located in a huge office building)
+          maxLength: 35
+        doorCode:
+          type: string
+          description: A code to open the door . It is possible to input 3 different codes separated by a /
+          maxLength: 35
+        building:
+          type: string
+          description: Information of the building (e.g. when located on a big campus).
+          maxLength: 35
+        department:
+          type: string
+          description: Information on the department (e.g. when located in a huge office-building with different departments on the same floor).
+          maxLength: 35
+        countryCode:
+          $ref: '#/components/schemas/Country'
+        state:
+          type: string
+          description: State within the country, e.g. CA for California.
+          maxLength: 2
+        zipCode:
+          type: string
+          description: Destination zipcode of the parcel that was scanned
+          maxLength: 9
+          pattern: ^([A-Za-z0-9]?\s?-?)+$
+        city:
+          $ref: '#/components/schemas/City'
+    Message:
+      type: object
+      required:
+        - messageType
+        - messageDestType
+        - messageDestination
+        - messageTrigger
+      properties:
+        notifSenderComp:
+          type: string
+          description: Notification Sender Company Name1
+          maxLength: 35
+        notifSenderContact:
+          type: string
+          description: Notification Sender contact person
+          maxLength: 35
+        messageType:
+          type: string
+          description: >
+            Notification type 
+             * `EMAIL`
+             * `PHONE`
+             * `SMS`
+             * `APP`
+          enum: [EMAIL, PHONE, SMS, APP]
+        messageDestType:
+          type: string
+          description: >
+            Destination stakeholder of the notification
+              * `s0` : Receiver / Consignee
+              * `s1` : Sender / Consignor
+              * `s2` : Requester
+              * `s3` : Other
+          enum: [s0, s1, s2, s3]
+        messageDestination:
+          type: string
+          description: 'Destination for the notification, e.g. telephone number, email address, etc. … The required data format for the pro active message types SMS, phone and FAX is as follows: "+international country numberphone number" Has to be encoded in one of the following ways: - XXXXXXXX or - +intcodeXXXXXXXX or - 00intcodeXXXXXXXX' 
+          maxLength: 100
+        messageTrigger:
+          type: string
+          description: >
+            This code is used to trigger the message according to rules associated to 
+              * `s1` : Pick-up
+              * `s2` : Non-delivery
+              * `s3` : Delivery
+              * `s4` : Inbound
+              * `s5` : Out for delivery
+              * `s902` : Delivery in parcel shop
+              * `s904` : Predict notification
+          enum: [s1, s2, s3, s4, s5, s902, s904]
+        messageLang:
+          type: string
+          description: Language of the proactive notification 2 (ISO 639-1 alpha 2 code, e.g. DE). MSG are maintain per BU. The list of available language is maintain by the BU which send the message.. Default language will be the one in the BU which send the message. 
+          maxLength: 2
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        messageSenderUrl:
+          allOf:
+            - $ref: '#/components/schemas/Url'
+            - description: Sender Company Logo URL. Will be used if the destination BU is able to manage it. The origin BU Is responsible for the content of the URL. (size restriction of 225 x 225 pixels).
+    StakeholderLegalEntity :
+      title: StakeholderLegalEntity
+      type: object
+      properties:      
+        businessType:
+          type: string
+          description: >
+            Business Type:
+              * `P` : PRIVATE
+              * `B` : BUSINESS
+          enum: [P, B]
+        taxeIdType:
+          type: string
+          description: >
+            Type of document if businessType = B, this field becomes mandatory (dependency of the customs export regime) applicable or not according export customs clearance of origin country if businessType = P, this field is empty. Note - Data in this field to be captured based on the rules of each BU.
+              * `P` : PASSPORT Number
+              * `C` : CNPJ (ou CPF) Number (Brésil)
+          enum: [P, C]
+        taxeIdValue:
+          type: string
+          description: Document information. Data in this field to be captured based on the rules of each BU. Become mandatory if taxeIdType is filled
+          maxLength: 20
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        webSite:
+          allOf:
+            - $ref: '#/components/schemas/Url'
+            - description: Selling website
+        fiscalVatRepresentant:
+          type: string
+          description: Fiscal VAT number. This field should be left Blank / Empty and Only populated with the Fiscal VAT number if applicable / known 
+          maxLength: 20  
+          pattern: '^([a-zA-Z0-9]{1,})$'
+    LegalEntity :
+      title: LegalEntity
+      type: object
+      properties:      
+        businessType:
+          type: string
+          description: >
+            Business Type:
+              * `P` : PRIVATE
+              * `B` : BUSINESS
+          enum: [P, B]
+        eori:
+          allOf:
+            - $ref: '#/components/schemas/Eori'
+            - description: EORI number. If businessType = B, this field becomes mandatory else, if businessType = P, this field is empty.
+        vatNumber:
+          allOf:
+            - $ref: '#/components/schemas/VatNumber'
+            - description: VAT number. If businessType = B, this field becomes mandatory else, if businessType = P, this field is empty
+        taxeIdType:
+          type: string
+          description: >
+            Type of document if businessType = B, this field becomes mandatory (dependency of the customs export regime) applicable or not according export customs clearance of origin country if businessType = P, this field is empty. Note - Data in this field to be captured based on the rules of each BU.
+              * `P` : PASSPORT Number
+              * `C` : CNPJ (ou CPF) Number (Brésil)
+          enum: [P, C]
+        taxeIdValue:
+          type: string
+          description: Document information. Data in this field to be captured based on the rules of each BU. Become mandatory if taxeIdType is filled
+          maxLength: 20
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        webSite:
+          allOf:
+            - $ref: '#/components/schemas/Url'
+            - description: Selling website
+        fiscalVatRepresentant:
+          type: string
+          description: Fiscal VAT number. This field should be left Blank / Empty and Only populated with the Fiscal VAT number if applicable / known 
+          maxLength: 20  
+          pattern: '^([a-zA-Z0-9]{1,})$'
+    CustomerInfos:
+      title: CustomerInfos
+      type: object
+      properties:      
+        custAccNumber:
+          type: string
+          description: BU’s Internal Customer’s Account Number
+          maxLength: 20
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        custCompAccNumber:
+          type: string
+          description: Customer complementary Number. Used to further differentiate categories for a customer (ex marketplaces)
+          maxLength: 35
+          example: 'AMA124124AZEAZE'           
+        custSubAccNumber:
+          deprecated: true
+          type: number
+          description: Customer number SUBID. This field will be deprecated in a future version, please use custCompAccNumber instead.
+          maxLength: 35
+        uniqCustId:
+          type: string
+          description: BU’s internal Unique Customer ID/Identifier
+          maxLength: 17
+    RegistrationNumber:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Stakeholder''s registration number type. Value can depend on stakeholder''s business type (Private or Business). For example, EORI and/or VAT can be expected for a Business stakeholder. Specific national registration number types such as Codice fiscale can be expected for a Private stakeholder.
+          enum: [EORI, VAT, Codice fiscale]
+          maxLength: 20
+        value:
+          type: string
+          description: Value for above registration number type
+          maxLength: 35
+    Swap:
+      type: object
+      required:
+        - parcelNumber
+        - parcelNumberBack
+        - serviceBack
+      additionalProperties: false
+      properties:
+        parcelNumber:
+          allOf:
+            - $ref: '#/components/schemas/ParcelNumber'
+            - description: Parcel label number of the first shipment
+        parcelNumberBack:
+          allOf:
+            - $ref: '#/components/schemas/ParcelNumber'
+            - description: Parcel label number for the way back
+        serviceBack:
+          type: string
+          description: Service code for the parcel type on the way back. Requires a numerical value to be specified which corresponds to the parcel service code.
+          pattern: '^([0-9]{1,3})$'
+        swapTypeCode:
+          type: string
+          description: This code describe the swap procedure to be applied (operation, billing,…). For domestic parcels, this code is managed by the BU (all BU has its own list of codes). For cross-border parcels, the list of code has to be defined
+            in the future.
+          pattern: '^([0-9]{1,3})$'
+    ShipInfo:
+      type: object
+      required:
+        - addService
+        - messageNumber
+      properties:
+        addService:
+          type: string
+          description: >
+            Values:
+              * `s1` : Delivery information
+              * `s2` : Documents return
+              * `s3` : Written permission to deposit goods by sender
+              * `s4` : Department delivery
+              * `s5` : Online permission to deposit goods
+              * `s6` : Parcel box
+              * `s7` : Information at indoor scanning
+              * `s8` : Locking Out-for-delivery
+              * `s9` : Delivery without signature
+          enum: [s1, s2, s3, s4, s5, s6, s7, s8, s9]
+        messageNumber:
+          type: string
+          description: Message number default 1 (no message) For domestic parcel, it will identify a message defined by the BU when the functionality is available. For cross-border parcel it will identify a message defined centrally (by GeoPost) and translated by all the destination BU in their own language. Reserved for future usage.
+          maxLength: 5
+          pattern: '^([0-9]{1,})$'
+        function:
+          type: string
+          description: > 
+            Blockable functions 
+             * `LOCKTV` : appointment scheduled
+             * `LOCKASG` : written permission to deposit goods
+             * `LOCKEVM` : delivery with non-recurring authority
+             * `LOCKSHOP` : Parcel shop
+             * `LOCKDZB` : delivery to a third party with notification of delivery
+             * `LOCKAGE` : Blocking delivery related to the age of the receiver 
+          enum: [LOCKTV, LOCKASG, LOCKEVM, LOCKSHOP, LOCKDZB, LOCKAGE]
+        parameter:
+          type: string
+          description: Parameter (free text)
+          maxLength: 300
+    SoCode:
+      title: SoCode
+      type: string
+      description: GeoPost Service Code / Sorting Code in GeoRouting (SoCode)      
+      maxLength: 3
+      pattern: '^([0-9]{1,})$'
+    ServiceCodes:
+      title: ServiceCodes
+      type: object
+      required:
+        - soCode      
+      properties:
+        asCode:
+          title: AsCode
+          type: string
+          description: Additional Service Code links to the SOCODE 
+          maxLength: 6
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        soCode: 
+          $ref: '#/components/schemas/SoCode'
+    Stakeholder:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        customerInfos:
+          allOf:
+            - $ref: '#/components/schemas/CustomerInfos'
+            - description: BU's Internal customer details 
+        type:
+          type: string
+          description: > 
+            Type of stakeholder. 
+             * `IM` = Importer
+             * `EX` = Exporter
+             * `SL` = Seller
+             * `BU` = Buyer 
+          enum: [ IM, EX, SL, BU]
+        pudoId:
+          $ref: '#/components/schemas/PudoId'
+        legalEntity:
+          $ref: '#/components/schemas/StakeholderLegalEntity'
+        registrationNumbers:
+            type: array
+            items: 
+              $ref: '#/components/schemas/RegistrationNumber'
+        contact:
+            $ref: '#/components/schemas/Contact'
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+            - required:
+                - street
+                - countryCode
+                - zipCode
+                - city             
+    InterInvoiceLine:
+      type: object
+      additionalProperties: false
+      required:
+        - itemsQuantity
+        - cContent
+        - cAmountLine
+        - cOrigin
+        - rcTarif
+        - scTarif
+      properties:
+        cInvoicePosition:
+          type: string
+          description: Line number of the invoice
+          pattern: '^([0-9]{1,6})$'
+        itemsQuantity:
+          type: string
+          description: Quantity of items per article or invoice line even for low / mid / high value or any type of customer
+          pattern: '^([0-9]{1,6})$'
+        cContent:
+          type: string
+          description: Content (Depending of the destination system. Could be cut by some system to the first 35 characters)
+          maxLength: 200
+        cAmountLine:
+          allOf:
+            - $ref: '#/components/schemas/CurrencyAmount'
+            - description: Value of invoice position
+        cUnitPrice:
+           allOf:
+            - $ref: '#/components/schemas/CurrencyAmount'
+            - description: Price for a single item of an article (eg. 0,50€ for 1 pen). QITEMS * UNITPRICE = CAMOUNTLINE. Separator is "." (point). The number of decimal will depend of the currency (it could be from 0 to three digits). 
+        cComment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Internal GeoPost comment. Not use by the customers
+        cOrigin:
+          allOf:
+            - $ref: '#/components/schemas/Country'
+            - description: CountryCode of invoice origin
+        cNetWeight:
+          allOf:
+            - $ref: '#/components/schemas/Weight'
+            - description: Total weight of the article, excluding packaging in grams. 
+        cGrossWeight:
+          allOf:
+            - $ref: '#/components/schemas/Weight'
+            - description: Total weight of the article including packaging in grams.
+        cProdCode:
+          type: string
+          description: Internal Customer product code
+          maxLength: 255
+        cProdType:
+          type: string
+          description: Short description of the product
+          maxLength: 70
+        cFabricComposition:
+          type: string
+          description: Description of fabric composition
+          maxLength: 200
+        rcTarif:
+          allOf:
+            - $ref: '#/components/schemas/Tarif'
+            - description: 'Customs tarif number (HSCODE) applicable for the customs clearance gateway and/or destination country. Ex: origin China different than Europe'
+        scTarif:
+          allOf:
+            - $ref: '#/components/schemas/Tarif'
+            - description: Customs tarif number. Mandatory according to the origin country. If origin custom not done by a BU RCTARIF and SCTARIF can have the same value
+        goodsWebPage:
+          allOf:
+            - $ref: '#/components/schemas/Url'
+            - description: Goods web page of the seller Emarchant
+        cPreferentialOrigin:
+          $ref: '#/components/schemas/PreferentialOrigin'
+    PreferentialOrigin:
+      type: object
+      properties:
+        requested:
+          type: boolean
+          description: Flag marking sender's request for preferential origin regime to be applied
+          default: false
+        proofOfOrigin:
+          $ref: '#/components/schemas/ProofOfOrigin'
+        customsAuthorizationNumber:
+          type: string
+          description: In case of request for preferential origin regime, sender must provide customs authorization number
+          maxLength: 35
+    ProofOfOrigin:
+      type: object
+      required:
+       - type
+       - date
+      properties:
+        type:
+          type: string
+          description: In case of request for preferential origin regime, sender must provide type of proof of origin
+          maxLength: 35       
+        date:
+          allOf:
+            - description: In case of request for preferential origin regime, sender must provide date of proof of origin
+            - $ref: '#/components/schemas/Date'
+        referenceNumber:
+          type: string
+          description: In case of request for preferential origin regime, sender must provide reference number of proof of origin
+          maxLength: 35       
+    Delivery:
+      type: object
+      additionalProperties: false
+      properties:
+        deliveryDay:
+          type: string
+          description: Allowed delivery days in the week (0 = Sunday, 1 = Monday etc.). Comma separated list of the possible delivery days, e.g. 2,3,4,5 For some BU, Saturday delivery is a specific service (specific service code) that include an extra cost in the invoice. In this case, the delivery on Saturday will not be driven by this flag.
+          maxLength: 20
+        deliveryDateFrom:
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: Fixed date delivery from date
+        deliveryDateTo:
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: Fixed date delivery to date
+        timeFrameFrom:
+          allOf:
+            - $ref: '#/components/schemas/TimeFrame'
+            - description: Timeframe from which the consignee is reachable
+        timeFrameTo:
+          allOf:
+            - $ref: '#/components/schemas/TimeFrame'
+            - description: Timeframe untill the consignee is reachable
+        bookingNumber:
+          type: string
+          description: Specify the number of the booking to organize the delivery for some
+          maxLength: 15
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        podInfos:
+          type: array
+          items: 
+            $ref: '#/components/schemas/PodInfo'
+          maxItems: 5
+    HazardousSubstance:
+      type: object
+      required:
+        - unNo
+        - class
+        - subWeight
+      properties:
+        unNo:
+          type: string
+          description: 'Substance identification: UN-No.'
+          maxLength: 4
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        class:
+          type: string
+          description: 'Substance identification: Class'
+          maxLength: 6
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        cCode:
+          type: string
+          description: 'Substance identification: Classification code'
+          maxLength: 5
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        pgGroup:
+          type: string
+          description: 'Substance identification: Packing group'
+          maxLength: 5
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        subDescr:
+          type: string
+          description: Substance description (redundant)
+          maxLength: 160
+        subDanger:
+          type: string
+          description: Substance sub-danger (redundant)
+          maxLength: 10
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        trc:
+          type: string
+          description: Tunnel restriction code (redundant)
+          maxLength: 1
+          pattern: '^([a-zA-Z0-9]{1})$'
+        subWeight:
+           allOf:
+             - $ref: '#/components/schemas/Weight'
+             - description: Weight of this substance in Grams units without decimal delimiter (e.g. 3000 equals 3kg)
+        explWeight:
+           allOf:
+             - $ref: '#/components/schemas/Weight'
+             - description: Net weight of the explosive mass of this substance in Grams rounded to the nearest Grams units without decimal delimiter (e.g. 3000 equals 3kg).
+        factor:
+          type: string
+          description: Factor of the substance (redundant) (999=unlimited)
+          maxLength: 3
+          pattern: '^([0-9]{1,})$'
+        nagText:
+          type: string
+          description: Not else named
+          maxLength: 150
+    Cod:  
+      title: Cod
+      type: object
+      additionalProperties: false
+      required:
+        - nAmount
+        - nCollectType
+      properties:
+        nAmount:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: COD amount in the currency of the destination country
+            - required:
+              - amount
+              - currency
+        nCollectType:
+          type: string
+          description: >
+            Collection type
+              * `s0` : cash
+              * `s1` : crossed cheque
+              * `s2` : credit card
+              * `s3` : ...
+              * `s9` : default (depending of the receiving BU)
+          enum: [s0, s1, s2, s3, s9]
+        nPurpose:
+          type: string
+          description: Intended use
+          maxLength: 14
+        sbkCode:
+          type: string
+          description: Bank Code
+          maxLength: 25
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        sbkName:
+          type: string
+          description: Bank Name
+          maxLength: 27
+        sAccount:
+          type: string
+          description: Bank account number
+          maxLength: 25
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        sAccName:
+          type: string
+          description: Account holder
+          maxLength: 30
+        iban:
+          type: string
+          description: International account number
+          maxLength: 50
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        bic:
+          type: string
+          description: Bank Code
+          maxLength: 50
+          pattern: '^([a-zA-Z0-9]{1,})$'
+    Rod:
+      title: Rod
+      type: object
+      additionalProperties: false
+      required:
+        - duties
+        - taxes
+        - customsFees
+        - extra
+      properties:
+        duties:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Amount to be collected after custom clearance.
+            - required:
+              - amount
+              - currency
+        taxes:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Amount to be collected after custom clearance for VAT
+            - required:
+              - amount
+              - currency
+        customsFees:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Fees to recover the customs management cost.
+            - required:
+              - amount
+              - currency
+        extra:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Extra fee to be collected.
+            - required:
+              - amount
+              - currency
+    ReturnInfos:
+      title: ReturnInfos
+      type: object
+      required:
+        - retAddress
+      properties:
+        retAddress:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+            - required:
+                - street
+                - countryCode
+                - city
+        retContact:
+          $ref: '#/components/schemas/ContactDetails'
+        retComment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Return address comments
+        retGln:
+          $ref: '#/components/schemas/Gln'
+        retGps:
+          $ref: '#/components/schemas/Gps'
+        retParcelNumber:
+          type: string
+          description: Parcel number.
+          pattern: '^([a-zA-Z0-9]{1,32})$'
+        retSoCode:
+          $ref: '#/components/schemas/SoCode'
+        retDepot:
+          allOf:
+            - $ref: '#/components/schemas/Depot' 
+            - description: Return depot number
+        retPudoId:
+          $ref: '#/components/schemas/PudoId'
+    Goods:
+      title: Goods
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - features
+      properties:
+        type:
+          type: string
+          description:  >
+            List of defined goods 
+             * `FOOD`
+          enum: [FOOD]
+        features:
+          type: string
+          description: >
+            List of defined features 
+             * `FRESH`: (= Defined range of temperature)
+             * `FROZEN`: (= Defined range of temperature)
+          enum: [FRESH, FROZEN]
+        limitDate:
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: (Limit Date of Consommation) Provided by customer
+        temperature:
+          $ref: '#/components/schemas/Temperature'
+        cares:
+          type: string
+          description: Gives indication or instructions for specific
+            handling
+          pattern: '^([0-9]{1,10})$'
+        description:
+          type: string
+          description: Detailled description or comment on the goods.
+          maxLength: 200
+    ParcelInfos:
+      title: ParcelInfos
+      type: object
+      required: 
+        - parcelNumber
+        - parcelNumberCcKey        
+      properties:
+        parcelNumber:
+          $ref: '#/components/schemas/ParcelNumber'
+        originParcelNumber:
+          type: string
+          description: Provides the domestic parcel number. It is used only for the domestic information without PARCELNUMBER information
+          maxLength: 50
+        parcelNumberCcKey:
+            type: string
+            description: Control character key compute from the parcel number.
+            maxLength: 1
+            pattern: '^([a-zA-Z0-9]{1})$'
+        dimensions:
+            $ref: '#/components/schemas/Dimensions'
+        declaredWeight:
+            allOf:
+              - $ref: '#/components/schemas/Weight' 
+              - description: Weight of each individual parcel as declared by the customer in grams units without decimal delimiter (e.g. 3000 equals 3kg)
+        measuredWeight:
+            allOf:
+              - $ref: '#/components/schemas/Weight' 
+              - description: Weight of each individual parcel as measured by each BU in grams units without decimal delimiter (e.g. 3000 equals 3kg)
+    ShipmentInfos:
+      title: ShipmentInfos
+      type: object
+      required:
+        - shipmentType
+      properties:
+        mpsId:
+          type: string
+          description: Shipment ID Could be the ID of the first parcel of the list (master ID) or could be another ID specially created for that.
+          maxLength: 14
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        originMpsId:
+          type: string
+          description: This field defines the domestic shipment number. It is dedicated to ALL BUs.
+          maxLength: 50
+        mpsIdCcKey:
+          type: string
+          description: Control character key compute from the MPSID
+          maxLength: 1
+          pattern: '^([a-zA-Z0-9]{1})$'
+        weightAndDimension:
+          $ref: '#/components/schemas/WeightAndDimension'
+        delModAllow:
+          type: string
+          description: >
+            Delivery instruction mofification allow flag,Default value = 0, Possible values:
+              * `s0` = zero-cost modified instructions
+              * `s1` = No modification allowed
+              * `s2` = modified instructions with charge 
+          enum: [s0, s1, s2]
+        hardware:
+          type: string
+          description: >
+            Hardware - Flag:
+              * `D` - Depot software manual entry
+              * `M` - MDU software manual entry
+              * `F` - From 2D barcode
+              * `G` - Back-office manual entry 
+              * `X` - Import hub (new)
+              * `H` - Export hub (new)
+              * `I` - Interface system partner / country
+              * `E` - Customer web portal
+              * `K` - Directly from customer (EDI customer)
+              * `P` - Stand alone shipping station
+              * `R` - GEORETURN Portal (new)
+              * `S` - GeoPost tool
+              * `W` - Web service
+          enum: [D, M, F, G, X, H, I, E, K, P, R, S, W]
+        shipmentType:
+          type: string
+          description: >
+            Type of shipment By default, type of shipment value = 0, Possible values:
+              * `s0` = Strd INT process
+              * `s1` = Direct Injection 
+              * `s2` = Direct Infeed
+          enum: [s0, s1, s2]
+          default: s0
+    MasterAirwayBill:
+      title: MasterAirwayBill
+      type: object
+      properties:
+        number:
+          type: string
+          description: Master-Airwaybill (the first three numbers mark the airline e.g.020-31804625 020 = Lufthansa).    
+          maxLength: 12
+        mawbDate:
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: Date of MAWB. Master-Airwaybill.
+        deadWeight:
+          allOf:
+            - $ref: '#/components/schemas/Weight'
+            - description: Master-Airwaybill total weight 
+        volumetricWeight:
+          allOf:
+            - $ref: '#/components/schemas/Weight'
+            - description: Total volumetric weight of the MAWB
+        bagNumber:
+          type: number
+          description: Number of bags per MAWB    
+          maxLength: 4
+    AirInfos:
+      title: AirInfos
+      type: object
+      required:
+        - masterAirwayBill
+      properties:
+        masterAirwayBill:
+          $ref: '#/components/schemas/MasterAirwayBill'
+        flightNumber:
+          type: string
+          description: 3 flight numbers MAX.
+          maxLength: 18
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        fromAirport:
+          type: string
+          description: From airport, IATA Code.    
+          maxLength: 3
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        toAirport:
+          type: string
+          description: To airport, IATA Code.
+          maxLength: 3
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        estimatedDeparture:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - description: Estimated date and time of flight departure
+        estimatedArrival:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - description: Estimated date and time of flight arrival
+    RoadInfos:
+      title: RoadInfos
+      type: object
+      required:
+        - lorry
+      properties:
+        lorry:
+          type: string
+          description: Lorry number (could be the plate number of a truck)     
+          maxLength: 20
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        sealNo:
+          type: string
+          description: Field to define the seal number of the Linehaul
+          minLength: 5          
+          maxLength: 35
+          pattern: '^([a-zA-Z0-9]{5,})$'
+        consoMrn:
+          type: string
+          description: MRN of the electronic export declaration
+          maxLength: 18
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        trailer:
+          type: string
+          description: For road, swap body / trailer number (number at the back).  
+          maxLength: 12
+    Port:
+      type: string
+      description: Port of the vessel if the linehaul is a boat. Port name is in 5 characters according to the port naming international norm   
+      maxLength: 5
+      pattern: '^([a-zA-Z0-9]{1,})$'
+    SeaInfos:
+      title: SeaInfos
+      type: object
+      required:
+        - loadingPort
+        - dischargePort
+        - vesselName
+        - originPortNat
+      properties:
+        loadingPort:
+          allOf:
+            - $ref: '#/components/schemas/Port'
+            - description: Loading port 
+        dischargePort:
+          allOf:
+            - $ref: '#/components/schemas/Port'
+            - description: Discharge port 
+        vesselName:
+          type: string
+          description: Name of the vessel if linehaul is a boat.  
+          maxLength: 70
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        originPortNat:
+          type: string
+          description: Nationality of the vessel origin port if the linehaul is a boat. 
+          maxLength: 70
+          pattern: '^([a-zA-Z0-9]{1,})$'
+    Sender:
+      type: object
+      additionalProperties: false
+      required:
+        - senderAddress
+      properties:
+        customerInfos:
+          $ref: '#/components/schemas/CustomerInfos'
+        senderAddress:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+            - required:
+                - street
+                - countryCode
+                - city
+        senderContact:
+          $ref: '#/components/schemas/ContactDetails'
+        senderComment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Sender comments in the receiver country language or English.
+        senderGln:
+          $ref: '#/components/schemas/Gln'
+        senderGps:
+          $ref: '#/components/schemas/Gps'
+        senderAccountOwner:
+          type: string
+          description: Define the owner of the customer account customer. This owner is responsible to bill the parcel.
+          maxLength: 3
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        senderLegalEntity:
+          $ref: '#/components/schemas/LegalEntity'
+    Receiver:
+      type: object
+      additionalProperties: false
+      required:
+        - receiverAddress
+      properties:
+        receiverCustId:
+          type: string
+          description: GeoPost Customer number of the final consignee
+          pattern: '^([a-zA-Z0-9]{1,17})$'
+        receiverPudoId:
+          $ref: '#/components/schemas/PudoId'
+        receiverAddress:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+            - required:
+                - street
+                - countryCode
+                - city
+        receiverContact:
+          $ref: '#/components/schemas/ContactDetails'
+        receiverComment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Additional comments
+        receiverGps:
+          $ref: '#/components/schemas/Gps'
+        receiverLegalEntity:
+          $ref: '#/components/schemas/LegalEntity' 
+    International:
+      type: object
+      additionalProperties: false
+      required:
+        - clearanceCleared
+        - opCode
+        - reasonForExport
+      properties:
+        parcelType:
+          type: string
+          description: > 
+            Parcel type within the shipment. Different parcel types can't be mixed into one shipment 
+             * `D` : Document 
+             * `P` : Non-Doc
+          enum: [D, P]
+        cAmount:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Declared customs amount in total (documents = 0)
+        cPapers:
+          type: array
+          description: Accompanying documents
+          items:
+            $ref: '#/components/schemas/CPaper'
+        cComment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Internal GeoPost comment. Not used by the customer.
+        clearanceCleared:
+          type: string
+          description: >
+            Values: 
+             * `N` : No
+             * `F` : Free
+             * `E` : Export Cleared
+             * `T` : Transit Cleared
+             * `I` : Import Cleared
+             * `H` : Hybrid 
+          enum: [N, F, E, T, I, H]
+        highLowValue:
+          type: string
+          description: >
+            (H)igh, (M)id (above 22€ and below 150€), (L)ow.
+             * `H` : High
+             * `M` : Medium 
+             * `L` : Low 
+          enum: [H, M, L]
+        preAlertStatus:
+          type: string
+          description: >
+            Status of the preAlert:
+             * `S03` : Data captured by sending depot
+             * `S04` : Data are available for export gateway depots 
+             * `S05` : Pre-alert provided (1st linehaul) 
+             * `S06` : Return to sending depot by export gateway 
+             * `S07` : Deactivated 
+             * `S08` : HV import customs cleared 
+             * `S09` : transit via road (T1) 
+             * `S13` : Pre-alert provided (2nd linehaul) 
+             * `S14` : Returned by import gateway (1st linehaul) 
+             * `S15` : LV import customs cleared 
+             * `S16` : Returns to sending country (2nd linehaul)  
+          enum: [S03, S04, S05, S06, S07, S08, S09, S13, S14, S15, S16]
+        cIncoterm:
+          type: string
+          description: >
+            Incoterm on commercial invoice, as defined by International Chamber of Commerce (ICC). If neither incoterm nor shipping cost is specified on invoice, BU must use EXW by default:
+             * `EXW` - Ex Works
+             * `FCA` - Free Carrier
+             * `CPT` - Carriage Paid To
+             * `CIP` - Carriage and Insurance Paid To
+             * `DAP` - Delivered At Place
+             * `DPU` - Delivered at Place Unloaded
+             * `DDP` - Delivery Duty Paid
+             * `FAS` - Free Alongside Ship
+             * `FOB` - Free On Board
+             * `CFR` - Cost and Freight
+             * `CIF` - Cost, Insurance and Freight
+          enum: [EXW, FCA, CPT, CIP, DAP, DPU, DDP, FAS, FOB, CFR, CIF]  
+        cIncotermLocation:
+          type: object
+          properties:
+            countryCode:
+              description: >
+                Incoterm country of location, as defined by International Chamber of Commerce (ICC). Depending on the incoterm, can be place of delivery, destination, port of destination...). All three ISO 3166 standards will be accepted: 
+                 * ISO 3166-1: 2 Alpha Numerical Characters
+                 * ISO 3166-1: 3 Alpha Numerical Characters
+                 * ISO 3166-1: 3 Numerical Characters
+              allOf: 
+               - $ref: '#/components/schemas/Country'
+            city:
+              description: >
+                Incoterm city of location, as defined by International Chamber of Commerce (ICC). Depending on the incoterm, can be place of delivery, destination, port of destination... )
+              allOf:
+               - $ref: '#/components/schemas/City'
+        cPaymentTerm:
+          type: string
+          description: > 
+            Indicates how the Import Gateway recovers Tax & Duties. If shipper asks for IOSS but shipment is not eligible, then T&D is to be collected according to this payment term. Initial list:
+             * `A` - Importing BU collects T&D from Importer (current DAP)
+             * `B` - Importing BU invoices T&D to sending BU, who charges their shipper (current e-DAP)
+             * `C` - Duties paid by sender / sending BU, taxes paid by receiver / importer
+             * `D` - Duties paid by receiver / importer, taxes paid by sender / sending BU
+          enum: [A,B,C,D]
+          maxLength: 2
+        cShippingCost:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Corresponds to shipping cost on commercial invoice. It can be 0 if the invoice clearly states transport cost is free, or that it is included in global price (eg. DAP) 
+        cInsuranceCost:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Corresponds to insurance cost on commercial invoice.
+        cPackagingCost:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Corresponds to packaging cost on commercial invoice.
+        cInvoice:
+          type: string
+          description: Invoice number Separator is "|" (a pipe) in case of multiple invoice numbers
+          maxLength: 35
+        cInvoiceDates:
+          type: array
+          description: Invoice dates
+          items:
+            $ref: '#/components/schemas/Date'
+          maxItems: 4
+        cNumber:
+          type: string
+          description: Customer deferment number with can be used for duty tax collection
+          pattern: '^([a-zA-Z0-9]{1,35})$'
+        exportMRN:
+          type: string
+          description: MRN of the electronic export declaration
+          maxLength: 20          
+        originalExportMRN:
+          type: string
+          description: To use in case of return. Contains initial export MRN, so that return customs procedure may be applied instead of import customs procedure. 
+          maxLength: 20  
+        opCode:
+          allOf:
+            - $ref: '#/components/schemas/OpCode'
+            - description: INS for the first transfer then UPD or DEL if necessary. By default, the only possible value Is INS except if the usage of others values has been negotiated between the sender and the receiver.
+        numberOfArticle:
+          type: string
+          description: This is the real number of commodities (RCTARIF / SCTARIF). The number of INTERINVOICELINEs must equal the NUMBEROFARTICLE
+          pattern: '^([0-9]{1,6})$'
+        destCountryReg:
+          type: string
+          description: 'Destination country registration information : Registration number or FDA If destination is DPD UK : Applies to B2B and B2C (Not applicable for C2C) shipments with a goods value under £135 (Excludes shipping cost) and if the Incoterm is not DDP. This is expected to come into force March 19, however no official communication from HMRC yet.'
+          maxLength: 15 
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        reasonForExport:
+          type: string
+          description: >
+            Reason for export 
+             * `s01` : sale
+             * `s02` : return/replacement 
+             * `s03` : gift    
+          enum: [s01, s02, s03]
+          default: s01
+        interInvoiceLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterInvoiceLine' 
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+        stakeholders:
+          type: array
+          items: 
+            $ref: '#/components/schemas/Stakeholder'
+    Person:
+      type: object
+      additionalProperties: false
+      required:
+        - persDelivery
+      properties:
+        persDelivery:
+          type: string
+          description: >
+            Personal delivery type:
+             * `s1` : department delivery (without personal identification)
+             * `s2` : personal delivery with personal identification (IDCheck) 
+             * `s3` : personal delivery without personal identification at PUDO (e.g. Direct PUDO delivery) 
+             * `s4` : personal delivery with personal identification at PUDO (e.g. Direct PUDO delivery) 
+             * `s5` : personal delivery with personal identification at PUDO plus ID-Check (e.g. Direct PUDO delivery) 
+             * `s6` : personal delivery with personal identification (ID Check) and recording of the ID.    
+          enum: [s1, s2, s3, s4, s5, s6]
+        persName:
+          allOf:
+            - $ref: '#/components/schemas/Name'
+            - description: Name of the person authorized to accept the consignment.
+        persPhone1:
+          allOf:
+            - $ref: '#/components/schemas/PhoneNumber'
+            - description: Telephone number of the person authorized to accept the consignment or in the case of collection to handover the consigment.
+        persPhone2:
+          allOf:
+            - $ref: '#/components/schemas/PhoneNumber'
+            - description: Telephone number of the person authorized to accept the consignment.
+        persId:
+          type: string
+          description: Real consignee's personal identification number.
+          pattern: '^([a-zA-Z0-9]{1,35})$'
+        persDateOfBirth:
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: Real consignee's date of birth.
+        persDepot:
+          $ref: '#/components/schemas/Depot'
+        persAddress:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+            - description: Real consignee's Address
+        persContact:
+          type: string
+          description: Recipient contact person. Could be different of the consignee's name
+          maxLength: 35
+        persFax:
+          allOf:
+            - $ref: '#/components/schemas/PhoneNumber'
+            - description: Recipient fax number of the real consignee
+        persEmail:
+          allOf:
+            - $ref: '#/components/schemas/Email'
+            - description: E-Mail address of the real consignee
+        persGln:
+          $ref: '#/components/schemas/Gln'
+        persComment:
+          allOf:
+            - $ref: '#/components/schemas/Comment'
+            - description: Comment of the real consignee
+        persGps:
+          $ref: '#/components/schemas/Gps'
+    Parcel:
+      type: object
+      additionalProperties: false
+      required:
+      - parcelInfos
+      - serviceCodes
+      properties:
+        parcelInfos:
+          $ref: '#/components/schemas/ParcelInfos'
+        parcelRank:
+          type: string
+          description: Rank of the parcel within a multi-piece shipment. Set to one for the masterpiece of the shipment or for a single piece. Default = Blank
+          pattern: '^([0-9]{1,3})$'
+        sendParcelRefs:
+          title: sendParcelRefs
+          type: array
+          description: List of complementary informations
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/SendParcelRef'
+        receiverParcelRef:
+          type: string
+          description: Receiver reference number
+          maxLength: 35
+        serviceCodes:
+          $ref: '#/components/schemas/ServiceCodes'
+        pPartnerRefs:
+          type: array
+          description: Partner´s own parcel reference field
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/PPartnerRef'
+        hins:
+            $ref: '#/components/schemas/Hins'
+        hazardousLimitedQuantities:
+          title: HazardousLimitedQuantities 
+          type: boolean
+          description: >
+            Limited quantities of hazardous goods parcel value.
+          default: false
+        hazardousPackCode:
+          type: string
+          description: Packing code (see PACKINGCODE).
+          maxLength: 3
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        opCode:
+          allOf:
+            - $ref: '#/components/schemas/OpCode'
+            - description: If not set, will be considered as INS or UPD if the record already exists
+        pContent:
+          type: string
+          description: Content (Depending of the destination systems. Could be cut by some system to the first 35 characters) The language recommended in this field is English
+          maxLength: 200
+        pOwnerBu:
+          type: string
+          description: This field describes the Business Unit who is responsible of the parcel. For example a parcel managed by Chronopost, picked-up from SEUR and send to Belgium. In this case this field will include the Chronopost Reference The value of this field is provided by the GeoRoute Specification
+          maxLength: 3
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        pPartnerCode:
+          type: string
+          description: Describe a generic partner code on the parcel information (i.e. Partner Product code)
+          maxLength: 35
+        bagNo:
+          type: string
+          description: Bag Number
+          maxLength: 35
+        nopsCode:
+          type: string
+          description: Non - operational service elements (NOPS elements)
+          pattern: '^([a-zA-Z0-9]{1,50})$'
+        cod:
+          $ref: '#/components/schemas/Cod'
+        rod:
+          $ref: '#/components/schemas/Rod'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        swap:
+          $ref: '#/components/schemas/Swap'
+        shipInfo:
+          $ref: '#/components/schemas/ShipInfo'
+        returnInfos:
+          $ref: '#/components/schemas/ReturnInfos'
+        hazardousSubstances:
+          type: array
+          items:
+            $ref: '#/components/schemas/HazardousSubstance'
+        goods:
+          $ref: '#/components/schemas/Goods'
+    Shipment:
+      title: Shipment
+      description: Pre-alert coming from a BU to another BU for non-custom traffic.
+      type: object
+      required:
+      - shipmentInfos
+      - sendingDepot
+      - mpsCount
+      - opCode
+      - dataDateTime
+      - sender
+      - receiver
+      - international
+      - parcel
+      properties:
+        shipmentInfos:
+          $ref: '#/components/schemas/ShipmentInfos'
+        customsRef:
+          type: string
+          description: Consignment number for the customs point of view.
+          maxLength: 25
+        sendingDepot:
+          allOf:
+            - $ref: '#/components/schemas/Depot'
+            - description: Sending depot. Used as origin routing place for routing. This field is also used for the Sending / Collecting depot for a collection request. For SHIPNOTRET if the real sending depot is not known, the field must be defined with a generic default Depot Code. 
+        creationDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - description: Creation timestamp of the shipment
+        recipientDepot:
+          allOf:
+            - $ref: '#/components/schemas/Depot'
+            - description: Recipient depot          
+        routingInfos:
+          $ref: '#/components/schemas/RoutingInfos'
+        sptDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - description: Date and time when the shipment is expected to be transferred to the system
+        sptRealDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - description: Date when the shipment has been really transferred to the system       
+        sPartnerRefs:
+          type: array
+          maxItems: 2          
+          items:
+            $ref: '#/components/schemas/SPartnerRef'
+        sPartnerCode:
+          type: string
+          description: This field is a generic field describing a partner code
+          maxLength: 35
+        mpsComp:
+          type: string
+          description: >
+            Values :
+             * `s0` - Reserved for the future usage
+             * `s1` - No complete delivery (MPS incomplete)
+             * `s2` - Complete delivery (MPS complete). It is mandatory for COD 
+          enum: [s0, s1, s2]
+          default: s0   
+        mpsCRefs:
+          type: array
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/MpsCRef'
+        mpsBillRef:
+          type: string
+          description: Customer reference for billing or clearing
+          maxLength: 35
+        mpsCount:
+          type: integer
+          description: Number of parcels per shipment
+          maximum: 999
+        crReorderNr:
+          type: string
+          description: Order number that has to be unique within the ordering depot. This number can be reused after 6 months. In DPD Core 6 is the max length expected.
+          pattern: '^([a-zA-Z0-9]{1,20})$'     
+        opCode:
+          $ref: '#/components/schemas/OpCode'            
+        systemDepot:
+          allOf:
+          - $ref: '#/components/schemas/Depot' 
+          - description: Depot responsible for data creation / update
+        dataDateTime:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - description: Data timestamp when the shipment was created / modified. In case of creation (i.e. OPCODE = INS),DATADATETIME may be equal to CDATE+CTIME.
+        sender:
+          $ref: '#/components/schemas/Sender'       
+        receiver:
+          $ref: '#/components/schemas/Receiver'      
+        international:
+          $ref: '#/components/schemas/International'  
+        person:
+          $ref: '#/components/schemas/Person'  
+        delivery:
+          $ref: '#/components/schemas/Delivery'    
+        parcel:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Parcel'
+    Consolidation:
+      title: Consolidation
+      description: Pre-alert coming from one BU to another BU for consolidation information for customs traffic
+      type: object
+      required:
+      - linehaul
+      - gatewayExport
+      - gatewayImport
+      - opCode
+      - shipment
+      properties:
+        airInfos:
+          $ref: '#/components/schemas/AirInfos'
+        linehaul:
+          type: string
+          description: >
+            Values :
+             * `AI` : Air 
+             * `RO` : Road
+             * `SE` : Sea
+          enum: [AI, RO, SE]
+        freightPosition:
+          type: number
+          description: Position on freight list.    
+          maxLength: 6
+        gatewayExport:
+          allOf:
+            - $ref: '#/components/schemas/Depot'
+            - description: GeoPost depot code of Export gateway.
+        gatewayImport:
+          allOf:
+            - $ref: '#/components/schemas/Depot'
+            - description: GeoPost depot code of Import gateway.
+        opCode:
+          $ref: '#/components/schemas/OpCode'
+        freightSequence:
+          type: string
+          description: Sequential number of the freight list to be put into the MAWB  
+          maxLength: 12
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        roadInfos:
+          $ref: '#/components/schemas/RoadInfos'
+        cccRef:
+          type: string
+          description: Collective customs clearance (Break Bulk brokerage) consolidation reference number
+          maxLength: 25
+          pattern: '^([a-zA-Z0-9]{1,})$'
+        transport:
+          allOf:
+            - $ref: '#/components/schemas/Amount'
+            - description: Custom transport cost
+        seaInfos:
+          $ref: '#/components/schemas/SeaInfos'
+        shipment:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Shipment'  
+                    
+security:
+  - ApiKeyAuth: []
